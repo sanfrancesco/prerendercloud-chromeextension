@@ -1,26 +1,27 @@
+var port = chrome.runtime.connect({name: "Sample Communication"});
+
+function isOn() { return localStorage.getItem('toggle') === 'true'; }
+function toggle(isOn) {
+  port.postMessage({ isOn });
+  document.getElementById('toggle').checked = isOn;
+  document.getElementById('status').innerHTML = isOn ? 'on' : 'off';
+  document.getElementById('status').style.background = isOn ? 'rgba(0,100,0,0.5)' : 'rgba(200,0,0,0.5)';
+}
 
 document.getElementById('toggle').addEventListener('click', function() {
   setToggleState(document.getElementById('toggle').checked);
 });
 
+function refreshToggleState() {
+  toggle(isOn());
+}
+
 function setToggleState(val) {
-  console.log('setting state to', val);
-  chrome.storage.sync.set({toggle: val}, getToggleState);
+  localStorage.setItem('toggle', val)
+  refreshToggleState()
 }
 
-function getToggleState() {
-  chrome.storage.sync.get({toggle: true}, function(items) {
-    console.log('getting state', items);
-    let isOn = !!items.toggle;
-    console.log('isOn',isOn);
-    document.getElementById('toggle').checked = isOn;
-    document.getElementById('status').innerHTML = isOn ? 'on' : 'off';
-    document.getElementById('status').style.background = isOn ? 'rgba(0,100,0,0.5)' : 'rgba(200,0,0,0.5)';
-    chrome.browserAction.setBadgeText({text: isOn ? 'on' : 'off'});
-  });
-}
-
-getToggleState();
+refreshToggleState();
 
 document.querySelector('#go-to-options').addEventListener('click', function() {
   chrome.runtime.openOptionsPage();

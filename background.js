@@ -8,11 +8,32 @@
   * 5. stop the 'loading' loop when the prerendered version is received
   */
 
-// show on by default
-chrome.browserAction.setBadgeText({text: 'on'});
+var tabSubscribers;
 
-// disable javascript
-chrome.contentSettings.javascript.set({primaryPattern: '<all_urls>', setting: 'block'});
+class TabSubscribers {
+  create(tabId, url) {
+    this[tabId] = new Tab(tabId, url)
+  }
+  remove(tabId) {
+    delete this[tabId];
+  }
+}
+
+function isOn() { return localStorage.getItem('toggle') === 'true'; }
+function toggle(isOn) {
+  chrome.browserAction.setBadgeText({text: isOn ? 'on' : 'off'});
+  chrome.contentSettings.javascript.set({primaryPattern: '<all_urls>', setting: isOn ? 'block' : 'allow'});
+  tabSubscribers = new TabSubscribers();
+}
+
+// subscribe to the browser_action (popup window) toggle button
+chrome.runtime.onConnect.addListener(function(port) {
+  port.onMessage.addListener(({ isOn }) => toggle(isOn));
+});
+
+// read from local storage to see what to do on initial boot
+toggle(isOn());
+
 
 function runCode(tabId, code, cb) {
   chrome.tabs.executeScript(tabId, {code: code}, cb);
@@ -50,15 +71,6 @@ function loadingCode() {
 
 }
 
-class TabSubscribers {
-  create(tabId, url) {
-    this[tabId] = new Tab(tabId, url)
-  }
-  remove(tabId) {
-    delete this[tabId];
-  }
-}
-
 // there are, empirically (trial and error) 3 javascript contexts
 // 1. onBeforeRequest
 // 2. onHeadersReceived
@@ -87,19 +99,19 @@ class Tab {
 }
 
 
-var tabSubscribers = new TabSubscribers();
-
 // subscribe to all request's rendering/painting lifecycle per tab
 chrome.webNavigation.onDOMContentLoaded.addListener(function(details) {
-  tabSubscribers[details.tabId] && tabSubscribers[details.tabId].onDOMContentLoaded(details);
+  isOn() && tabSubscribers[details.tabId] && tabSubscribers[details.tabId].onDOMContentLoaded(details);
 });
 chrome.webRequest.onHeadersReceived.addListener(function(details) {
-  tabSubscribers[details.tabId] && tabSubscribers[details.tabId].onHeadersReceived(details);
+  isOn() && tabSubscribers[details.tabId] && tabSubscribers[details.tabId].onHeadersReceived(details);
 }, {urls: ['<all_urls>'], types: ['main_frame']})
 
 
 // create Tab objects per request/response start stop lifecycle
 chrome.webRequest.onBeforeRequest.addListener(function(details) {
+  if (!isOn()) return;
+
   // prevents chrome://, (extensions, options pages etc.. from triggering the prerender)
   if (!details.url.startsWith('http')) return;
 
