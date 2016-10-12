@@ -16,11 +16,11 @@ function runCode(tabId, code, cb) {
   chrome.tabs.executeScript(tabId, {code: code}, cb);
 }
 
-function prerenderFetchCode() {
+function prerenderFetchCode(apiKey) {
   return `
     if (!window.prerendered) {
       var request = new Request('https://service.prerender.cloud/'+window.location.href, {
-        headers: {'x-prerender-token': ''}
+        headers: {'x-prerender-token': '${apiKey}'}
       });
       window.fetch(request)
           .then(res => res.text())
@@ -65,6 +65,7 @@ class Tab {
   constructor(tabId, url) {
     this.tabId = tabId;
     this.url = url;
+    chrome.storage.sync.get({apiKey: ''}, items => this.apiKey = items.apiKey);
     runCode(this.tabId, loadingCode());
   }
 
@@ -78,7 +79,7 @@ class Tab {
   // but we lose the javascript context if we run it before the DOMContentLoaded event
   onDOMContentLoaded(details) {
     runCode(this.tabId, loadingCode());
-    runCode(this.tabId, prerenderFetchCode());
+    runCode(this.tabId, prerenderFetchCode(this.apiKey));
   }
 
 }
