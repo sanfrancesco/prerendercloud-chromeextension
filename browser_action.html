@@ -5,23 +5,34 @@
     <style>
       body { font-size: 0.8em; padding: 0 1em; }
       ul { list-style-type: none; padding: 0; margin: 0 0 2em 0; }
-      .toggle span { font-size: 2.5em; padding: 0.05em 1em; }
-      .toggle input[type='checkbox'] { transform: scale(3.1); margin: 0 2.5em 0 1em; position: relative; bottom: 0.6em; }
-      .toggle input[type='checkbox']:focus{ outline: 0; }
+      ul li { margin: 0 0 1em 0; }
+      div.toggle { margin: 1em 0 0 0; text-align: right; }
+      div.toggle label { display: flex; }
+      div.toggle label div:first-child { flex: 3; font-size: 2em; padding: 0.05em 1em; text-transform: uppercase;}
+      div.toggle label div:last-child { flex: 1; }
+      div.toggle div:hover { cursor: pointer; }
+      div.toggle input[type='checkbox'] { transform: scale(2.5); position: relative; top: 0.65em;  }
+      div.toggle input[type='checkbox']:focus{ outline: 0; }
+      div.toggle input[type='checkbox']:hover { cursor: pointer; }
+
       .options { margin: 3em 0 0 0;  }
     </style>
   </head>
 
   <body>
+    <div class='toggle'>
+      <label>
+        <div id='status'>toggle</div>
+        <div><input type='checkbox' name='toggle' id='toggle' /></div>
+      </label>
+    </div>
     <h1>Prerender.cloud</h1>
     <div>
       <ul>
-        <li>disables Javascript and then...</li>
-        <li>remotely renders Javascript</li>
+        <li>1. disables Javascript and then...</li>
+        <li>2. remotely renders Javascript</li>
+        <li>to enable Javascript rendered content without enabling Javascript!</li>
       </ul>
-      <p class='toggle'>
-        <label><input type="checkbox" name="toggle" id="toggle" /><span id='status'>toggle</span></label>
-      </p>
     </div>
     <div class='options'>
       <p><button id="go-to-options">Click here to add an API Key to remove 500 pages per month max</button></p>
