@@ -8,6 +8,8 @@
   * 5. stop the 'loading' loop when the prerendered version is received
   */
 
+// show on by default
+chrome.browserAction.setBadgeText({text: 'on'});
 
 // disable javascript
 chrome.contentSettings.javascript.set({primaryPattern: '<all_urls>', setting: 'block'});
