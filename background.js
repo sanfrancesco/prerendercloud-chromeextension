@@ -98,6 +98,9 @@ chrome.webRequest.onHeadersReceived.addListener(function(details) {
 
 // create Tab objects per request/response start stop lifecycle
 chrome.webRequest.onBeforeRequest.addListener(function(details) {
+  // prevents chrome://, (extensions, options pages etc.. from triggering the prerender)
+  if (!details.url.startsWith('http')) return;
+
   tabSubscribers.remove(details.tabId);
   tabSubscribers.create(details.tabId, details.url);
 }, {urls: ['<all_urls>'], types: ['main_frame']}, ['blocking']);
