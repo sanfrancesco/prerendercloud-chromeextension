@@ -88,41 +88,50 @@ class Tab {
   constructor(tabId, url) {
     this.tabId = tabId;
     this.url = url;
-    chrome.storage.sync.get({apiKey: ''}, items => this.apiKey = items.apiKey);
-    runCode(this.tabId, loadingCode());
-    prerenderFetch(this.apiKey, url)
-      .then(prerendered => {
-        if (this.loaded) {
-          // send prerendered message
-          chrome.tabs.sendMessage(this.tabId, { prerendered });
-        } else {
-          // save it for later
-          this.prerendered = prerendered;
-        }
-      })
+    this._startLoad();
+    this._startFetch();
   }
 
   onBeforeSendHeaders(details) {
-    runCode(this.tabId, loadingCode());
+    this._startLoad();
   }
   onHeadersReceived() {
-    runCode(this.tabId, loadingCode());
+    this._startLoad();
   }
   onResponseStarted(details) {
-    runCode(this.tabId, loadingCode());
+    this._startLoad();
   }
   onDOMContentLoaded(details) {
-    runCode(this.tabId, loadingCode());
-    runCode(this.tabId, addListenerCode())
+    this._startLoad();
+    this._startListener();
+
     if (this.prerendered) {
-      // send prerendered message
       chrome.tabs.sendMessage(this.tabId, { prerendered: this.prerendered });
     } else {
-      // save it for later
       this.loaded = true;
     }
   }
 
+  _startLoad() {
+    runCode(this.tabId, loadingCode());
+  }
+
+  _startFetch() {
+    chrome.storage.sync.get({apiKey: ''}, items => {
+      prerenderFetch(items.apiKey, this.url)
+        .then(prerendered => {
+          if (this.loaded) {
+            chrome.tabs.sendMessage(this.tabId, { prerendered });
+          } else {
+            this.prerendered = prerendered;
+          }
+        })
+    });
+  }
+
+  _startListener() {
+    runCode(this.tabId, addListenerCode())
+  }
 }
 
 
