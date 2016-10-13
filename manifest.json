@@ -1,8 +1,8 @@
 {
-"name": "Prerender.cloud - disables Javascript locally, renders it remotely",
+"name": "Prerender.cloud: disable JS, render remotely",
 "version": "0.0.1",
 "manifest_version": 2,
-"description": "Surf the Javascript information superhighway without Javascript",
+"description": "Surf the Javascript information superhighway without enabling Javascript",
 "homepage_url": "https://www.prerender.cloud/documentation/chrome-extension",
 "permissions": [
   "webNavigation",
