@@ -36,7 +36,7 @@ toggle(isOn());
 
 
 function runCode(tabId, code, cb) {
-  chrome.tabs.executeScript(tabId, {code: code}, cb);
+  chrome.tabs.executeScript(tabId, {code: code, runAt: 'document_start'}, cb);
 }
 
 function prerenderFetchCode(apiKey) {
@@ -71,10 +71,6 @@ function loadingCode() {
 
 }
 
-// there are, empirically (trial and error) 3 javascript contexts
-// 1. onBeforeRequest
-// 2. onHeadersReceived
-// 3. onDOMContentLoaded
 class Tab {
   constructor(tabId, url) {
     this.tabId = tabId;
@@ -83,14 +79,17 @@ class Tab {
     runCode(this.tabId, loadingCode());
   }
 
-  // this is the first moment where javascript
-  // can be executed in the context of the loaded URL
+  onBeforeSendHeaders(details) {
+    runCode(this.tabId, loadingCode());
+  }
   onHeadersReceived() {
     runCode(this.tabId, loadingCode());
   }
-
+  onResponseStarted(details) {
+    runCode(this.tabId, loadingCode());
+  }
   // intuitively we'd start the prerender fetch as early as possible
-  // but we lose the javascript context if we run it before the DOMContentLoaded event
+  // but we seem to lose the javascript context (and thus the fetch req) if we run it before the DOMContentLoaded event
   onDOMContentLoaded(details) {
     runCode(this.tabId, loadingCode());
     runCode(this.tabId, prerenderFetchCode(this.apiKey));
@@ -100,13 +99,18 @@ class Tab {
 
 
 // subscribe to all request's rendering/painting lifecycle per tab
+chrome.webRequest.onBeforeSendHeaders.addListener(function(details) {
+  isOn() && tabSubscribers[details.tabId] && tabSubscribers[details.tabId].onBeforeSendHeaders(details);
+}, {urls: ['<all_urls>'], types: ['main_frame']});
+chrome.webRequest.onHeadersReceived.addListener(function(details) {
+  isOn() && tabSubscribers[details.tabId] && tabSubscribers[details.tabId].onHeadersReceived(details);
+}, {urls: ['<all_urls>'], types: ['main_frame']});
+chrome.webRequest.onResponseStarted.addListener(function(details) {
+  isOn() && tabSubscribers[details.tabId] && tabSubscribers[details.tabId].onResponseStarted(details);
+}, {urls: ['<all_urls>'], types: ['main_frame']});
 chrome.webNavigation.onDOMContentLoaded.addListener(function(details) {
   isOn() && tabSubscribers[details.tabId] && tabSubscribers[details.tabId].onDOMContentLoaded(details);
 });
-chrome.webRequest.onHeadersReceived.addListener(function(details) {
-  isOn() && tabSubscribers[details.tabId] && tabSubscribers[details.tabId].onHeadersReceived(details);
-}, {urls: ['<all_urls>'], types: ['main_frame']})
-
 
 // create Tab objects per request/response start stop lifecycle
 chrome.webRequest.onBeforeRequest.addListener(function(details) {
