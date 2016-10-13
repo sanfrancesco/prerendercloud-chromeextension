@@ -1,11 +1,19 @@
 // prerender.cloud chrome extension - for prerendering javascript pages on a remote server to allow javascriptless clients
+
 /**
   * 1. disable javascript
   * 2. let the browser navigate to a page normally
+  *   2a. Q: why bother with a normal request if we're replacing it with a prerendered copy?
+  *       A: because the prerenderd HTML often has relative URLs, so we want our base URL to be
+  *          the original URL so the images can be served (as opposed to the service.prerender.cloud URL)
+  *          alternatively, we could load a light-weight fake, e.g. example.org, and just rewrite/redirect all incoming
+  *          chrome.webRequest's, but then the URL bar shows the incorrect URL
+  * 3. immediately start an AJAX request, within the context of the extension
   * 3. start a loop that replaces any normal content with 'loading'
   * 4. wait for the normal navigation to fire onDOMContentLoaded
-  * 4. start an AJAX request for the prerendered version
-  * 5. stop the 'loading' loop when the prerendered version is received
+  * 4. use "message passing" to send the AJAX response to the client window
+  * 5. stop the 'loading' loop when the prerendered version is received from "message passing"
+  * 6. finally set the DOM innerHTML
   */
 
 var tabSubscribers;
@@ -39,23 +47,28 @@ function runCode(tabId, code, cb) {
   chrome.tabs.executeScript(tabId, {code: code, runAt: 'document_start'}, cb);
 }
 
-function prerenderFetchCode(apiKey) {
+function addListenerCode() {
   return `
-    if (!window.prerendered) {
-      var request = new Request('https://service.prerender.cloud/'+window.location.href, {
-        headers: {'x-prerender-token': '${apiKey}'}
-      });
-      window.fetch(request)
-          .then(res => res.text())
-          .then(prerendered => {
-            window.prerendered = prerendered;
-            document.documentElement.innerHTML=prerendered;
-          })
-          .catch(console.error)
-    } else {
-      console.log('already prerendered');
-    }
+    chrome.runtime.onMessage.addListener(
+      function(request, sender, sendResponse) {
+        window.prerendered = true;
+        document.documentElement.innerHTML=request.prerendered;
+    });
   `;
+
+}
+
+function prerenderFetch(apiKey, url) {
+  return new Promise(function(res, rej) {
+    var request = new Request('https://service.prerender.cloud/'+url, {
+      headers: {'x-prerender-token': `${apiKey}`}
+    });
+    window.fetch(request)
+        .then(res => res.text())
+        .then(res)
+        .catch(rej)
+  })
+
 }
 
 function loadingCode() {
@@ -77,6 +90,16 @@ class Tab {
     this.url = url;
     chrome.storage.sync.get({apiKey: ''}, items => this.apiKey = items.apiKey);
     runCode(this.tabId, loadingCode());
+    prerenderFetch(this.apiKey, url)
+      .then(prerendered => {
+        if (this.loaded) {
+          // send prerendered message
+          chrome.tabs.sendMessage(this.tabId, { prerendered });
+        } else {
+          // save it for later
+          this.prerendered = prerendered;
+        }
+      })
   }
 
   onBeforeSendHeaders(details) {
@@ -88,11 +111,16 @@ class Tab {
   onResponseStarted(details) {
     runCode(this.tabId, loadingCode());
   }
-  // intuitively we'd start the prerender fetch as early as possible
-  // but we seem to lose the javascript context (and thus the fetch req) if we run it before the DOMContentLoaded event
   onDOMContentLoaded(details) {
     runCode(this.tabId, loadingCode());
-    runCode(this.tabId, prerenderFetchCode(this.apiKey));
+    runCode(this.tabId, addListenerCode())
+    if (this.prerendered) {
+      // send prerendered message
+      chrome.tabs.sendMessage(this.tabId, { prerendered: this.prerendered });
+    } else {
+      // save it for later
+      this.loaded = true;
+    }
   }
 
 }
