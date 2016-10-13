@@ -54,4 +54,18 @@ document.getElementById('api-key').addEventListener('keypress', function (e) {
     if (key === 13) save_options()
 });
 
+const fixAnchors = () => {
+  var links = document.getElementsByTagName("a");
+  for (var i = 0; i < links.length; i++) {
+    (function () {
+      var ln = links[i];
+      var location = ln.href;
+      ln.onclick = function () {
+          chrome.tabs.create({active: true, url: location});
+      };
+    })();
+  }
+}
+
 document.addEventListener('DOMContentLoaded', restore_options);
+document.addEventListener('DOMContentLoaded', fixAnchors);
