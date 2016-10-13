@@ -2,7 +2,7 @@
 
 # Prerender.cloud Chrome Extension
 
-<img style="float: right;" src="https://cloud.githubusercontent.com/assets/16573/19363707/59dadad2-9140-11e6-82f3-24e4c9412dbe.png">
+<img align="right" src="https://cloud.githubusercontent.com/assets/16573/19363707/59dadad2-9140-11e6-82f3-24e4c9412dbe.png">
 
 Read more details here: https://www.prerender.cloud/documentation/chrome-extension
 
