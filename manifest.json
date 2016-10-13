@@ -21,9 +21,5 @@
 "browser_action": {
   "default_popup": "browser_action.html"
 },
-"options_ui": {
-  "page": "options.html",
-  "chrome_style": true
-},
 "content_security_policy": "script-src 'self' https://ssl.google-analytics.com; object-src 'self'"
 }

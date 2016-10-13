@@ -23,7 +23,35 @@ function setToggleState(val) {
 
 refreshToggleState();
 
-document.querySelector('#go-to-options').addEventListener('click', function() {
-  chrome.runtime.openOptionsPage();
+// document.querySelector('#go-to-options').addEventListener('click', function() {
+//   chrome.runtime.openOptionsPage();
+// });
+
+function save_options() {
+  var apiKey = document.getElementById('api-key').value;
+
+  chrome.storage.sync.set({apiKey: apiKey}, function() {
+    // Update status to let user know options were saved.
+    var status = document.getElementById('api-key-status');
+    status.textContent = 'API key saved.';
+    setTimeout(function() {
+      status.textContent = '';
+    }, 2000);
+  });
+}
+
+function restore_options() {
+  chrome.storage.sync.get({apiKey: ''}, function(items) {
+    document.getElementById('api-key').value = items.apiKey;
+  });
+}
+
+document.getElementById('save').addEventListener('click', save_options);
+document.getElementById('api-key').addEventListener('keypress', function (e) {
+    var key = e.which || e.keyCode;
+    console.log('key', key);
+    // 13 is enter
+    if (key === 13) save_options()
 });
 
+document.addEventListener('DOMContentLoaded', restore_options);
